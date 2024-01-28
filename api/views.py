@@ -68,6 +68,9 @@ async def get_processed_texts_by_id(request):
 async def get_reference_samples(id: str):
     samples = []
     async for entry in ReferenceSample.objects.filter(pk=UUID(id)).values("theme", "part", "weight"):
+        entry["weight"] = round(entry["weight"] * 10)
+        if entry["weight"] < 1:
+            entry["weight"] = 1
         samples.append(entry)
     # print(samples)
     return samples
