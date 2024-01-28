@@ -36,8 +36,6 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     "api",
-    # "rest_framework_swagger",
-    "rest_framework",
     "drf_yasg",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -100,7 +98,7 @@ DATABASES = {
         'NAME': 'testDb',
         'USER': 'EngineUser',
         'PASSWORD': 'Bstu31',
-        'HOST': 'localhost',
+        'HOST': 'postgres',
         'PORT': '5432'
     }
 }

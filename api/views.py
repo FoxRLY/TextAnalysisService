@@ -11,8 +11,9 @@ from .models import ReferenceSample, UploadedFile
 from .forms import UploadFileForm
 from uuid import UUID
 from django.shortcuts import redirect
+from asyncio import sleep, CancelledError
 
-rabbit_host = "localhost"
+rabbit_host = "rabbit"
 connection = pika.BlockingConnection(
     pika.ConnectionParameters(host=rabbit_host, heartbeat=900)
 )
@@ -21,37 +22,54 @@ def openapi_file(request):
     return redirect("/static/docs/openapi.yaml")
 
 def docs(request):
-    # return render(request, "/static/docs/index.html")
     return redirect("/static/docs/index.html")
 
 @method_decorator(csrf_exempt, name="dispatch")
 class TextProcessingView(View):
-    def post(self, request, *args, **kwargs):
+    async def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            text = data.get("text", "")
-            theme = data.get("theme", "")
-
-            if text and theme:
-                # Запуск задачи Celery для обработки запроса
-                message_id = process_analysis_request(text, theme)
-
-                # Возвращение UUID задачи в ответе на запрос
-                return JsonResponse({"uuid": str(message_id)}, status=200)
-            else:
-                return JsonResponse({"error": "Invalid data"}, status=400)
+            results = await process_texts(data)
+            return JsonResponse(results)
+        except CancelledError as e:
+            print("Response cancelled")
+        except ValueError as e:
+            return JsonResponse({"error": str(e)}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
 
-def get_processed_texts_by_id(request):
+async def process_texts(data):
+    result = dict()
+    texts = []
+    if isinstance(data, list):
+        texts = data
+    elif isinstance(data, dict):
+        texts = [data]
+    if not (all([text.get("text") != None for text in texts]) and all([text.get("theme") != None for text in texts])):
+        raise ValueError("Wrong JSON format")
+
+    text_ids = [process_analysis_request(text.get("text"), text.get("theme")) for text in texts]
+    for id in text_ids:
+        while True:
+            if len(samples := await get_reference_samples(id)) > 0:
+                result[id] = samples
+                break
+            await sleep(1)
+    return result
+
+
+async def get_processed_texts_by_id(request):
     id = request.GET.get("id", "")
-    processed_texts = get_reference_samples(id=id)
+    processed_texts =  await get_reference_samples(id=id)
     return JsonResponse(list(processed_texts), safe=False)
 
 
-def get_reference_samples(id: str):
-    samples = ReferenceSample.objects.filter(pk=UUID(id)).values("theme", "id", "part", "weight")
+async def get_reference_samples(id: str):
+    samples = []
+    async for entry in ReferenceSample.objects.filter(pk=UUID(id)).values("theme", "part", "weight"):
+        samples.append(entry)
+    # print(samples)
     return samples
 
 
@@ -96,7 +114,7 @@ def upload_reference_samples(request):
                     theme = item.get("id")
 
                     result = [{"id": id, "text": text, "label": label, "theme": theme}]
-                    print(result)
+                    # print(result)
                     # Отправка результата в брокер
                     channel.basic_publish(
                         exchange="",

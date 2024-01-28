@@ -28,7 +28,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UuidResponse'
+                $ref: '#/components/schemas/ReferenceSamples'
   /processed:
     get:
       tags:
@@ -51,11 +51,30 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReferenceSamples'
+                $ref: '#/components/schemas/ReferenceSamplesExt'
 components:
   schemas:
     ReferenceSamples:
+      type: object
+      properties:
+        91b6d14b-c099-431e-a447-c5c8ec2cbd29:
+          type: array
+          items:
+            type: object
+            properties:
+              theme:
+                type: string
+                example: Тема
+              part:
+                type: integer
+                example: 0
+              weight:
+                type: number
+                example: 1.0
+    ReferenceSamplesExt:
       type: array
+      additionalProperties:
+        type: string
       items:
         type: object
         properties:
@@ -71,18 +90,14 @@ components:
           weight:
             type: number
             example: 1.0
-    UuidResponse:
-      type: object
-      properties:
-        uuid:
-          type: string
-          example: 91b6d14b-c099-431e-a447-c5c8ec2cbd29
     InputText:
-      type: object
-      properties:
-        theme:
-          type: string
-          example: Тема
-        text:
-          type: string
-          example: Данный текст принадлежит какой-нибудь теме
+      type: array
+      items:
+        type: object
+        properties:
+          theme:
+            type: string
+            example: Тема
+          text:
+            type: string
+            example: Данный текст принадлежит какой-нибудь теме

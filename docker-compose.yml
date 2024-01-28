@@ -1,0 +1,14 @@
+version: '3.9'
+services:
+  front:
+    container_name: "front"
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    networks:
+      - "main-network"
+networks:
+  main-network:
+    name: "text-analyses_default"
+    external: true
